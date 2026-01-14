@@ -1,0 +1,8 @@
+{
+  "knigavuhe.org": {
+    "book_pattern": ".book_header"
+  },
+  "audiokniga.one": {
+    "book_pattern": ".player-container"
+  }
+}
