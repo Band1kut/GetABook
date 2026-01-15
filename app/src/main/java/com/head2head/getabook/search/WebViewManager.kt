@@ -13,8 +13,8 @@ fun WebViewComponent(
     initialUrl: String,
     modifier: Modifier = Modifier,
     onWebViewCreated: (WebView) -> Unit = {},
-    onBookPageDetected: (Boolean) -> Unit = {},  // ← Из Boolean в Boolean
-    onYandexPage: (WebView, String) -> Unit = {}  // ← Из (WebView, String) в Unit
+    onPageStarted: (String) -> Unit = {},
+    onPageFinished: (WebView, String) -> Unit = { _, _ -> }
 ) {
     AndroidView(
         factory = { context ->
@@ -22,8 +22,8 @@ fun WebViewComponent(
                 context = context,
                 initialUrl = initialUrl,
                 onWebViewCreated = onWebViewCreated,
-                onBookPageDetected = onBookPageDetected,
-                onYandexPage = onYandexPage
+                onPageStarted = onPageStarted,
+                onPageFinished = onPageFinished
             )
         },
         modifier = modifier
@@ -34,8 +34,8 @@ private fun createWebView(
     context: Context,
     initialUrl: String,
     onWebViewCreated: (WebView) -> Unit,
-    onBookPageDetected: (Boolean) -> Unit,  // ← Тип совпадает
-    onYandexPage: (WebView, String) -> Unit  // ← Тип совпадает
+    onPageStarted: (String) -> Unit,
+    onPageFinished: (WebView, String) -> Unit
 ): WebView {
     return WebView(context).apply {
         // Настройки
@@ -44,10 +44,10 @@ private fun createWebView(
         settings.loadWithOverviewMode = true
         settings.useWideViewPort = true
 
-        // WebViewClient с логикой
+        // WebViewClient с оптимизированной логикой
         webViewClient = createWebViewClient(
-            onYandexPage = onYandexPage,  // ← Просто передаём как есть
-            onBookPageDetected = onBookPageDetected
+            onPageStarted = onPageStarted,
+            onPageFinished = onPageFinished
         )
 
         // Сохраняем ссылку
@@ -61,15 +61,23 @@ private fun createWebView(
 }
 
 private fun createWebViewClient(
-    onYandexPage: (WebView, String) -> Unit,  // ← Тип совпадает
-    onBookPageDetected: (Boolean) -> Unit  // ← Тип совпадает
+    onPageStarted: (String) -> Unit,
+    onPageFinished: (WebView, String) -> Unit
 ): WebViewClient {
+    // Флаг для отслеживания выполнения CSS инъекции
+    var isYandexCleanupInjected = false
+
     return object : WebViewClient() {
         override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
             super.onPageStarted(view, url, favicon)
-            url?.let {
-                if (it.contains("yandex.ru", ignoreCase = true)) {
-                    Log.d("WebViewManager", "Начинается загрузка Яндекс")
+            url?.let { currentUrl ->
+                // ТОЛЬКО колбэк, никаких CSS инъекций!
+                onPageStarted(currentUrl)
+
+                // Сбрасываем флаг при начале новой загрузки
+                if (!currentUrl.contains("yandex.ru", ignoreCase = true)) {
+                    isYandexCleanupInjected = false
+                    Log.v("WebView", "Сброс флага CSS инъекции (не Яндекс)")
                 }
             }
         }
@@ -77,18 +85,25 @@ private fun createWebViewClient(
         override fun onPageFinished(view: WebView?, url: String?) {
             super.onPageFinished(view, url)
             url?.let { currentUrl ->
-                Log.d("WebViewManager", "Страница загружена: $currentUrl")
-
                 view?.let { webView ->
-                    // Яндекс
+                    Log.d("WebView", "Страница загружена: ${currentUrl.take(80)}...")
+
+                    // Яндекс очистка - ТОЛЬКО ЗДЕСЬ и ТОЛЬКО ОДИН РАЗ
                     if (currentUrl.contains("yandex.ru", ignoreCase = true)) {
-                        onYandexPage(webView, currentUrl)  // ← Правильный вызов
+                        if (!isYandexCleanupInjected) {
+                            Log.i("WebView", "Первая загрузка Яндекс, инжектим CSS")
+                            YandexCleanup.injectCleanup(webView, currentUrl)
+                            isYandexCleanupInjected = true
+                        } else {
+                            Log.d("WebView", "CSS уже инжектирован, пропускаем (возврат из кэша)")
+                        }
+                    } else {
+                        // Если это не Яндекс, сбрасываем флаг
+                        isYandexCleanupInjected = false
                     }
 
-                    // Проверка книг
-                    BookPageChecker.checkPage(webView, currentUrl) { isBookPage, site ->
-                        onBookPageDetected(isBookPage)  // ← Правильный вызов
-                    }
+                    // Вызываем колбэк
+                    onPageFinished(webView, currentUrl)
                 }
             }
         }

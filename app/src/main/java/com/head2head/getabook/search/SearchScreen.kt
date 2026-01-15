@@ -1,9 +1,11 @@
 package com.head2head.getabook.search
 
-import android.util.Log
+import android.webkit.WebView
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.*
@@ -11,13 +13,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun SearchScreen(
     initialUrl: String,
-    onWebViewCreated: (android.webkit.WebView) -> Unit = {}
+    onWebViewCreated: (WebView) -> Unit = {}
 ) {
-    var showDownloadButton by remember { mutableStateOf(false) }
+    val viewModel: SearchViewModel = viewModel()
+
+    // Следим за состояниями из ViewModel
+    val showDownloadButton by viewModel.showDownloadButton.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    // При первом отображении сбрасываем состояние
+    LaunchedEffect(Unit) {
+        viewModel.resetState()
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         // WebView компонент
@@ -25,53 +37,33 @@ fun SearchScreen(
             initialUrl = initialUrl,
             modifier = Modifier.fillMaxSize(),
             onWebViewCreated = onWebViewCreated,
-            onBookPageDetected = { isBookPage ->
-                showDownloadButton = isBookPage
-                if (isBookPage) {
-                    Log.i("SearchScreen", "Показана кнопка скачивания")
-                }
-            },
-            onYandexPage = { webView, url ->  // ← ДОБАВЬТЕ ПАРАМЕТРЫ!
-                YandexCleanup.injectCleanup(webView, url)
-            }
+            onPageStarted = { url -> viewModel.onPageStarted(url) },
+            onPageFinished = { webView, url -> viewModel.onPageFinished(webView, url) }
         )
 
-        // Плавающая кнопка скачивания
+        // Индикатор загрузки страницы
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(48.dp)
+            )
+        }
+
+        // Кнопка скачивания (только иконка)
         if (showDownloadButton) {
             FloatingActionButton(
-                onClick = {
-                    Log.d("SearchScreen", "Нажата кнопка скачивания")
-                    // TODO: Реализовать скачивание
-                },
+                onClick = { viewModel.onDownloadClicked() },
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)  // align ВНУТРИ Modifier
+                    .align(Alignment.BottomEnd)
                     .padding(16.dp),
-            ) {
-                Icon(
-                    painter = painterResource(android.R.drawable.ic_menu_save),
-                    contentDescription = "Скачать книгу"
-                )
-            }
+                content = {
+                    Icon(
+                        painter = painterResource(android.R.drawable.ic_menu_save),
+                        contentDescription = "Скачать аудиокнигу"
+                    )
+                }
+            )
         }
     }
 }
-
-// УДАЛИТЕ этот отдельный DownloadButton компонент или исправьте:
-/*
-@Composable
-private fun DownloadButton(
-    onClick: () -> Unit
-) {
-    FloatingActionButton(
-        onClick = onClick,
-        modifier = Modifier
-            .align(Alignment.BottomEnd)  // ОШИБКА: align нельзя использовать вне Box
-            .padding(16.dp),
-    ) {
-        Icon(
-            painter = painterResource(android.R.drawable.ic_menu_save),
-            contentDescription = "Скачать книгу"
-        )
-    }
-}
-*/
