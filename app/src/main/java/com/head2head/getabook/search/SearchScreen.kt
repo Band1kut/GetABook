@@ -25,6 +25,7 @@ fun SearchScreen(
     // Следим за состояниями из ViewModel
     val showDownloadButton by viewModel.showDownloadButton.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val isContentReady by viewModel.isContentReady.collectAsState()
 
     // При первом отображении сбрасываем состояние
     LaunchedEffect(Unit) {
@@ -32,7 +33,7 @@ fun SearchScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // WebView компонент
+        // WebView компонент - ВСЕГДА отображается, но может быть прозрачным
         WebViewComponent(
             initialUrl = initialUrl,
             modifier = Modifier.fillMaxSize(),
@@ -41,8 +42,8 @@ fun SearchScreen(
             onPageFinished = { webView, url -> viewModel.onPageFinished(webView, url) }
         )
 
-        // Индикатор загрузки страницы
-        if (isLoading) {
+        // Индикатор загрузки страницы (показываем дольше для Яндекс)
+        if (isLoading || !isContentReady) {
             CircularProgressIndicator(
                 modifier = Modifier
                     .align(Alignment.Center)
@@ -50,8 +51,8 @@ fun SearchScreen(
             )
         }
 
-        // Кнопка скачивания (только иконка)
-        if (showDownloadButton) {
+        // Кнопка скачивания (только иконка) - только когда контент готов
+        if (showDownloadButton && isContentReady) {
             FloatingActionButton(
                 onClick = { viewModel.onDownloadClicked() },
                 modifier = Modifier

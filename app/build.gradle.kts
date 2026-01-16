@@ -57,7 +57,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
 
     // Navigation (добавили через libs)
-    implementation(libs.androidx.navigation.compose)  // ← Эта строка
+    implementation(libs.androidx.navigation.compose)
 
     // Testing
     testImplementation(libs.junit)
