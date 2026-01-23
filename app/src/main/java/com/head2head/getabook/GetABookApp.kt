@@ -1,27 +1,24 @@
 package com.head2head.getabook
 
 import android.app.Application
-import com.head2head.getabook.data.SitesManager
 import android.util.Log
+import com.head2head.getabook.domain.repository.SitesRepository
+import dagger.hilt.android.HiltAndroidApp
+import javax.inject.Inject
 
+@HiltAndroidApp
 class GetABookApp : Application() {
-    private val TAG = "GetABookApp"
+
+    @Inject
+    lateinit var sitesRepository: SitesRepository
 
     override fun onCreate() {
         super.onCreate()
-        Log.i(TAG, "Приложение GetABook запущено")
 
-        val startTime = System.currentTimeMillis()
+        Log.d("GetABookApp", "Application started, warming up sites…")
 
-        // Инициализация менеджера сайтов
-        SitesManager.initialize(this)
+        val sites = sitesRepository.getAllSites()
 
-        val initTime = System.currentTimeMillis() - startTime
-        Log.i(TAG, "Инициализация приложения завершена за ${initTime}ms")
-    }
-
-    override fun onTerminate() {
-        Log.i(TAG, "Приложение GetABook завершает работу")
-        super.onTerminate()
+        Log.d("GetABookApp", "Sites warmed up: $sites")
     }
 }

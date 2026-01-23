@@ -1,8 +1,85 @@
-{
-  "knigavuhe.org": {
-    "book_pattern": ".book_header"
+[
+  {
+    "domain": "knigavuhe.org",
+    "bookPattern": ".book_header",
+    "hideElement": []
   },
-  "audiokniga.one": {
-    "book_pattern": ".player-container"
+  {
+    "domain": "audiokniga-online.ru",
+    "bookPattern": "body",
+    "hideElement": []
+  },
+  {
+    "domain": "audiokniga.one",
+    "bookPattern": ".player-container",
+    "hideElement": []
+  },
+  {
+    "domain": "audioknigi.fun",
+    "bookPattern": "body",
+    "hideElement": []
+  },
+  {
+    "domain": "audioknigi.pro",
+    "bookPattern": "body",
+    "hideElement": []
+  },
+  {
+    "domain": "book-zvuk.ru",
+    "bookPattern": "body",
+    "hideElement": []
+  },
+  {
+    "domain": "bookish.site",
+    "bookPattern": "body",
+    "hideElement": []
+  },
+  {
+    "domain": "pda.izib.uk",
+    "bookPattern": "#book_fave_button",
+    "hideElement": [
+      "div[class^='adfinity_block']"
+    ]
+  },
+  {
+    "domain": "knigi-audio.com",
+    "bookPattern": "body",
+    "hideElement": []
+  },
+  {
+    "domain": "knigimp3.com",
+    "bookPattern": "body",
+    "hideElement": []
+  },
+  {
+    "domain": "knizhin.net",
+    "bookPattern": "body",
+    "hideElement": []
+  },
+  {
+    "domain": "lis10book.com",
+    "bookPattern": ".col-3.d-xl-none",
+    "hideElement": ["div[id^='yandex_rtb']"]
+  },
+  {
+    "domain": "slovushko.com",
+    "bookPattern": "body",
+    "hideElement": []
+  },
+  {
+    "domain": "slushkin.online",
+    "bookPattern": "body",
+    "hideElement": []
+  },
+  {
+    "domain": "uknig.com",
+    "bookPattern": "body",
+    "hideElement": []
+  },
+  {
+    "domain": "vseaudioknigi.com",
+    "bookPattern": "body",
+    "hideElement": []
   }
-}
+]
+
