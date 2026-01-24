@@ -1,5 +1,8 @@
 package com.head2head.getabook.presentation.search
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -14,6 +17,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.head2head.getabook.presentation.webview.WebViewComponent
@@ -27,6 +31,14 @@ fun SearchScreen(
 ) {
     LaunchedEffect(Unit) {
         viewModel.loadUrl(query)
+
+        webViewManager.onPageStarted = { viewModel.onPageStarted() }
+        webViewManager.onPageFinished = { viewModel.onPageFinished() }
+
+        // МГНОВЕННАЯ реакция на клик
+        webViewManager.onUserLinkClick = {
+            viewModel.onPageStarted()
+        }
     }
 
     val isLoading by viewModel.isLoading.collectAsState()
@@ -47,10 +59,24 @@ fun SearchScreen(
             }
         }
 
-        if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center)
+        val overlayAlpha by animateFloatAsState(
+            targetValue = if (isLoading) 0.6f else 0f,
+            animationSpec = tween(200)
+        )
+
+        if (overlayAlpha > 0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White.copy(alpha = overlayAlpha))
             )
+
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
         }
 
         if (showDownloadButton) {

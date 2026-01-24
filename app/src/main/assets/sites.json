@@ -2,17 +2,17 @@
   {
     "domain": "knigavuhe.org",
     "bookPattern": ".book_header",
-    "hideElement": []
+    "hideElement": [".type_adf_native "]
   },
   {
     "domain": "audiokniga-online.ru",
-    "bookPattern": "body",
-    "hideElement": []
+    "bookPattern": "#playerjs1",
+    "hideElement": ["div[id^='adfox_']", "div[id^='yandex_rtb']"]
   },
   {
     "domain": "audiokniga.one",
     "bookPattern": ".player-container",
-    "hideElement": []
+    "hideElement": ["div[id^='yandex_rtb']"]
   },
   {
     "domain": "audioknigi.fun",
@@ -26,8 +26,8 @@
   },
   {
     "domain": "book-zvuk.ru",
-    "bookPattern": "body",
-    "hideElement": []
+    "bookPattern": ".abook-player",
+    "hideElement": ["div[id^='yandex_rtb']"]
   },
   {
     "domain": "bookish.site",
@@ -37,9 +37,7 @@
   {
     "domain": "pda.izib.uk",
     "bookPattern": "#book_fave_button",
-    "hideElement": [
-      "div[class^='adfinity_block']"
-    ]
+    "hideElement": ["div[class^='adfinity_block']"]
   },
   {
     "domain": "knigi-audio.com",

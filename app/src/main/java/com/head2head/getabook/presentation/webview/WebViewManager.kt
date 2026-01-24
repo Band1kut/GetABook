@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import android.webkit.ConsoleMessage
+import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -24,6 +25,10 @@ class WebViewManager @Inject constructor(
     private lateinit var pageAnalyzer: PageAnalyzer
     private lateinit var webView: WebView
 
+    var onPageStarted: (() -> Unit)? = null
+    var onPageFinished: (() -> Unit)? = null
+    var onUserLinkClick: ((String) -> Unit)? = null
+
     fun setPageAnalyzer(analyzer: PageAnalyzer) {
         this.pageAnalyzer = analyzer
     }
@@ -42,58 +47,34 @@ class WebViewManager @Inject constructor(
             cacheMode = WebSettings.LOAD_DEFAULT
         }
 
-        webView.webViewClient = object : WebViewClient() {
-
-            private val blockedHosts = listOf(
-                "yadro.ru",
-                "mc.yandex.ru",
-                "googletagmanager.com",
-                "adfinity.pro",
-//                "redirectto.cc",
-                "yandex.ru/ads",
-                "tds.bid",
-                "cdn.tds.bid",
-                "googlesyndication.com",
-                "pagead2.googlesyndication.com",
-//                "cdn.jsdelivr.net/npm/yandex-share2"
-            )
-
-            override fun shouldInterceptRequest(
-                view: WebView?,
-                request: WebResourceRequest?
-            ): WebResourceResponse? {
-
-                val url = request?.url?.toString() ?: return null
-
-                // Проверяем, содержит ли URL один из заблокированных доменов
-                if (blockedHosts.any { url.contains(it, ignoreCase = true) }) {
-                    Log.d("WebViewBlock", "Blocked: $url")
-
-                    // Возвращаем пустой ответ — запрос заблокирован
-                    return WebResourceResponse(
-                        "text/plain",
-                        "utf-8",
-                        null
-                    )
-                }
-
-                return super.shouldInterceptRequest(view, request)
+        // JS интерфейс
+        webView.addJavascriptInterface(object {
+            @JavascriptInterface
+            fun onLinkClick(url: String) {
+                onUserLinkClick?.invoke(url)
             }
+        }, "Android")
+
+        webView.webViewClient = object : WebViewClient() {
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 super.onPageStarted(view, url, favicon)
+                onPageStarted?.invoke()
                 if (url != null && view != null) {
                     pageAnalyzer.handleEvent(url, PageEvent.Started, view)
                 }
-
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
+                onPageFinished?.invoke()
+
                 if (url != null && view != null) {
+                    // Внедряем ловушку навигации
+                    scriptProvider.injectNavigationHook(view)
+
                     pageAnalyzer.handleEvent(url, PageEvent.Finished, view)
                 }
-
             }
         }
 
@@ -115,4 +96,3 @@ class WebViewManager @Inject constructor(
         webView.goBack()
     }
 }
-

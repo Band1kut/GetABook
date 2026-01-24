@@ -8,72 +8,92 @@ import javax.inject.Singleton
 class ScriptProvider @Inject constructor() {
 
     /**
-     * Генерация универсального скрипта скрытия элементов.
-     * Селекторы подставляются динамически.
+     * Универсальная ловушка навигации:
+     * - клики по ссылкам
+     * - history.pushState / replaceState
+     * - popstate
+     * - location.assign / replace
+     * - прямое присваивание location = ...
      */
-    private fun generateHideScript(selectors: List<String>): String {
-        val cssRules = selectors.joinToString("\n") { "$it { display: none !important; }" }
+    private val navigationHookJs = """
+        (function() {
+            function notify(url) {
+                try { window.Android.onLinkClick(url); } catch(e) {}
+            }
 
-        return """
-            (function() {
+            // 1. Клики по ссылкам
+            document.addEventListener('click', function(e) {
+                let el = e.target;
+                while (el && el.tagName !== 'A') el = el.parentElement;
+                if (el && el.href) notify(el.href);
+            }, true);
 
-                const css = `
-                    $cssRules
-                `;
+            // 2. pushState / replaceState
+            const pushState = history.pushState;
+            history.pushState = function(state, title, url) {
+                notify(url);
+                return pushState.apply(this, arguments);
+            };
 
-                function applyCSS() {
-                    try {
-                        if (!document.getElementById("getabook-hide-style")) {
-                            const style = document.createElement("style");
-                            style.id = "getabook-hide-style";
-                            style.textContent = css;
-                            document.head.appendChild(style);
-                            console.log("GetABook: CSS injected");
-                        }
-                    } catch (e) {
-                        console.log("GetABook: error injecting CSS", e);
-                    }
-                }
+            const replaceState = history.replaceState;
+            history.replaceState = function(state, title, url) {
+                notify(url);
+                return replaceState.apply(this, arguments);
+            };
 
-                // Первичное внедрение
-                applyCSS();
+            // 3. popstate
+            window.addEventListener('popstate', function() {
+                notify(location.href);
+            });
 
-                // Гарантия одного observer
-                if (!window.getabookObserverInitialized) {
-                    window.getabookObserverInitialized = true;
+            // 4. location.assign / replace
+            const assign = window.location.assign;
+            window.location.assign = function(url) {
+                notify(url);
+                return assign.call(window.location, url);
+            };
 
-                    try {
-                        const observer = new MutationObserver(() => {
-                            applyCSS();
-                        });
+            const replace = window.location.replace;
+            window.location.replace = function(url) {
+                notify(url);
+                return replace.call(window.location, url);
+            };
 
-                        observer.observe(document.documentElement, { childList: true, subtree: true });
-                        console.log("GetABook: observer started");
-                    } catch (e) {
-                        console.log("GetABook: observer error", e);
-                    }
-                }
+        })();
+    """.trimIndent()
 
-            })();
-        """.trimIndent()
+    fun injectNavigationHook(webView: WebView) {
+        webView.evaluateJavascript(navigationHookJs, null)
     }
 
-    /**
-     * Публичный метод для применения скрипта.
-     * Вызывается и на старте, и на финише.
-     */
     fun applyHideScript(selectors: List<String>, webView: WebView) {
         if (selectors.isEmpty()) return
-        val script = generateHideScript(selectors)
-        webView.evaluateJavascript(script, null)
-    }
 
-    /**
-     * Тестовый метод для Яндекса.
-     * Скрывает .Root.Root_inited
-     */
-    fun testYandex(webView: WebView) {
-        val selectors = listOf(".Root.Root_inited")
-        applyHideScript(selectors, webView)
+        val cssRules = selectors.joinToString("\n") { "$it { display: none !important; }" }
+
+        val script = """
+            (function() {
+                const css = `$cssRules`;
+
+                function applyCSS() {
+                    if (!document.getElementById("getabook-hide-style")) {
+                        const style = document.createElement("style");
+                        style.id = "getabook-hide-style";
+                        style.textContent = css;
+                        document.head.appendChild(style);
+                    }
+                }
+
+                applyCSS();
+
+                if (!window.getabookObserverInitialized) {
+                    window.getabookObserverInitialized = true;
+                    const observer = new MutationObserver(applyCSS);
+                    observer.observe(document.documentElement, { childList: true, subtree: true });
+                }
+            })();
+        """.trimIndent()
+
+        webView.evaluateJavascript(script, null)
     }
 }

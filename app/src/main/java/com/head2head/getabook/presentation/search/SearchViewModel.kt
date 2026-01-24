@@ -31,23 +31,27 @@ class SearchViewModel @Inject constructor(
     fun loadUrl(query: String) {
         viewModelScope.launch {
             _isLoading.value = true
-
             val url = buildSearchUrlUseCase(query)
-
             _targetUrl.value = url
         }
     }
 
+    fun onPageStarted() {
+        _isLoading.value = true
+    }
+
+    fun onPageFinished() {
+        _isLoading.value = false
+    }
+
     fun onBookPageDetected(isBook: Boolean) {
         _showDownloadButton.value = isBook
-        _isLoading.value = false
     }
 
     fun requestDownload(url: String) {
         viewModelScope.launch {
             _downloadProgress.value = 0
 
-            // Заглушка прогресса — твоя логика скачивания будет здесь
             for (i in 1..100) {
                 _downloadProgress.value = i
                 kotlinx.coroutines.delay(10)
