@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.head2head.getabook.data.active.ActiveSitesRepository
 import com.head2head.getabook.domain.usecase.BuildSearchUrlUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -43,8 +44,12 @@ class SearchViewModel @Inject constructor(
 
 
     fun onPageFinished() {
-        _isLoading.value = false
+        viewModelScope.launch {
+            delay(150)
+            _isLoading.value = false
+        }
     }
+
 
     fun onBookPageDetected(isBook: Boolean) {
         _showDownloadButton.value = isBook
