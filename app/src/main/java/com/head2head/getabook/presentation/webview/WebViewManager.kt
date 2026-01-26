@@ -6,13 +6,12 @@ import android.util.Log
 import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
-import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import com.head2head.getabook.data.scripts.ScriptProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.net.URL
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -27,7 +26,6 @@ class WebViewManager @Inject constructor(
 
     var onPageStarted: (() -> Unit)? = null
     var onPageFinished: (() -> Unit)? = null
-    var onUserLinkClick: ((String) -> Unit)? = null
 
     fun setPageAnalyzer(analyzer: PageAnalyzer) {
         this.pageAnalyzer = analyzer
@@ -47,12 +45,33 @@ class WebViewManager @Inject constructor(
             cacheMode = WebSettings.LOAD_DEFAULT
         }
 
-        // JS интерфейс
         webView.addJavascriptInterface(object {
+
+            /**
+             * CLICK HOOK — ранняя индикация
+             */
             @JavascriptInterface
-            fun onLinkClick(url: String) {
-                onUserLinkClick?.invoke(url)
+            fun onUserIntentNavigate() {
+                onPageStarted?.invoke()
             }
+
+            /**
+             * SPA HOOK — только для НЕ‑поисковиков
+             */
+            @JavascriptInterface
+            fun onSpaNavigation(relativeUrl: String) {
+                val current = webView.url ?: return
+
+                if (isSearchEngine(current)) {
+                    return
+                }
+
+                webView.post {
+                    val absolute = makeAbsoluteUrl(current, relativeUrl)
+                    webView.loadUrl(absolute)
+                }
+            }
+
         }, "Android")
 
         webView.webViewClient = object : WebViewClient() {
@@ -60,6 +79,7 @@ class WebViewManager @Inject constructor(
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 super.onPageStarted(view, url, favicon)
                 onPageStarted?.invoke()
+
                 if (url != null && view != null) {
                     pageAnalyzer.handleEvent(url, PageEvent.Started, view)
                 }
@@ -70,8 +90,14 @@ class WebViewManager @Inject constructor(
                 onPageFinished?.invoke()
 
                 if (url != null && view != null) {
-                    // Внедряем ловушку навигации
-                    scriptProvider.injectNavigationHook(view)
+
+                    // CLICK HOOK — всегда
+                    scriptProvider.injectClickHook(view)
+
+                    // SPA HOOK — только если НЕ поисковик
+                    if (!isSearchEngine(url)) {
+                        scriptProvider.injectSpaHook(view)
+                    }
 
                     pageAnalyzer.handleEvent(url, PageEvent.Finished, view)
                 }
@@ -94,5 +120,21 @@ class WebViewManager @Inject constructor(
 
     fun goBack() {
         webView.goBack()
+    }
+
+    private fun makeAbsoluteUrl(currentUrl: String, relative: String): String {
+        return try {
+            val base = URL(currentUrl)
+            URL(base, relative).toString()
+        } catch (e: Exception) {
+            currentUrl
+        }
+    }
+
+    private fun isSearchEngine(url: String): Boolean {
+        val u = url.lowercase()
+        return u.contains("yandex.") ||
+                u.contains("ya.ru") ||
+                u.contains("google.")
     }
 }

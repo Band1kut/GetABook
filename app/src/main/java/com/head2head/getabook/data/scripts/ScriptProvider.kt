@@ -8,27 +8,34 @@ import javax.inject.Singleton
 class ScriptProvider @Inject constructor() {
 
     /**
-     * Универсальная ловушка навигации:
-     * - клики по ссылкам
-     * - history.pushState / replaceState
-     * - popstate
-     * - location.assign / replace
-     * - прямое присваивание location = ...
+     * 1) CLICK HOOK — ВСЕГДА
+     * Сообщает Android о намерении навигации.
+     * НЕ отменяет переход.
+     * НЕ вызывает notify().
      */
-    private val navigationHookJs = """
+    private val clickHookJs = """
         (function() {
-            function notify(url) {
-                try { window.Android.onLinkClick(url); } catch(e) {}
-            }
-
-            // 1. Клики по ссылкам
             document.addEventListener('click', function(e) {
                 let el = e.target;
                 while (el && el.tagName !== 'A') el = el.parentElement;
-                if (el && el.href) notify(el.href);
-            }, true);
+                if (!el || !el.href) return;
 
-            // 2. pushState / replaceState
+                try { window.Android.onUserIntentNavigate(); } catch(e) {}
+            }, true);
+        })();
+    """.trimIndent()
+
+    /**
+     * 2) SPA HOOK — ТОЛЬКО ДЛЯ НЕ‑ПОИСКОВИКОВ
+     * Перехватывает pushState/replaceState/popstate/location.assign/replace.
+     * Сообщает Android о SPA‑переходе.
+     */
+    private val spaHookJs = """
+        (function() {
+            function notify(url) {
+                try { window.Android.onSpaNavigation(url); } catch(e) {}
+            }
+
             const pushState = history.pushState;
             history.pushState = function(state, title, url) {
                 notify(url);
@@ -41,12 +48,10 @@ class ScriptProvider @Inject constructor() {
                 return replaceState.apply(this, arguments);
             };
 
-            // 3. popstate
             window.addEventListener('popstate', function() {
                 notify(location.href);
             });
 
-            // 4. location.assign / replace
             const assign = window.location.assign;
             window.location.assign = function(url) {
                 notify(url);
@@ -58,12 +63,15 @@ class ScriptProvider @Inject constructor() {
                 notify(url);
                 return replace.call(window.location, url);
             };
-
         })();
     """.trimIndent()
 
-    fun injectNavigationHook(webView: WebView) {
-        webView.evaluateJavascript(navigationHookJs, null)
+    fun injectClickHook(webView: WebView) {
+        webView.evaluateJavascript(clickHookJs, null)
+    }
+
+    fun injectSpaHook(webView: WebView) {
+        webView.evaluateJavascript(spaHookJs, null)
     }
 
     fun applyHideScript(selectors: List<String>, webView: WebView) {

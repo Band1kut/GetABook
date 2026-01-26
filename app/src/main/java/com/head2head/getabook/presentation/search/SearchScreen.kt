@@ -34,11 +34,6 @@ fun SearchScreen(
 
         webViewManager.onPageStarted = { viewModel.onPageStarted() }
         webViewManager.onPageFinished = { viewModel.onPageFinished() }
-
-        // МГНОВЕННАЯ реакция на клик
-        webViewManager.onUserLinkClick = {
-            viewModel.onPageStarted()
-        }
     }
 
     val isLoading by viewModel.isLoading.collectAsState()

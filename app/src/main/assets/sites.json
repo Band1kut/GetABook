@@ -11,7 +11,7 @@
   },
   {
     "domain": "audiokniga.one",
-    "bookPattern": ".player-container",
+    "bookPattern": ".fleft",
     "hideElement": ["div[id^='yandex_rtb']"]
   },
   {
