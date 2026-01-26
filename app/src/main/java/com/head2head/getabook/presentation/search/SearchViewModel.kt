@@ -36,12 +36,12 @@ class SearchViewModel @Inject constructor(
         }
     }
 
-    // ⭐ Убираем overlay сразу при начале загрузки
+
     fun onPageStarted() {
         _isLoading.value = true
     }
 
-    // ⭐ Ничего не делаем — overlay уже скрыт
+
     fun onPageFinished() {
         _isLoading.value = false
     }
