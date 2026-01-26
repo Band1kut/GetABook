@@ -38,12 +38,12 @@ class SearchViewModel @Inject constructor(
 
     // ⭐ Убираем overlay сразу при начале загрузки
     fun onPageStarted() {
-        _isLoading.value = false
+        _isLoading.value = true
     }
 
     // ⭐ Ничего не делаем — overlay уже скрыт
     fun onPageFinished() {
-        // no-op
+        _isLoading.value = false
     }
 
     fun onBookPageDetected(isBook: Boolean) {
