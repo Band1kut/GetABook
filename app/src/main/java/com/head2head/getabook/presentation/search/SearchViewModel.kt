@@ -31,25 +31,27 @@ class SearchViewModel @Inject constructor(
 
     fun loadUrl(query: String) {
         viewModelScope.launch {
+            // 🔹 Первичная загрузка по запросу — тоже показываем оверлей
             _isLoading.value = true
             val url = buildSearchUrlUseCase(query)
             _targetUrl.value = url
         }
     }
 
-
-    fun onPageStarted() {
+    // 🔹 Клик пользователя (из JS) — мгновенно включаем оверлей
+    fun onUserClick() {
         _isLoading.value = true
     }
 
-
-    fun onPageFinished() {
-        viewModelScope.launch {
-            delay(150)
-            _isLoading.value = false
-        }
+    // 🔹 Реальное начало загрузки WebView — выключаем оверлей
+    fun onPageStarted() {
+        _isLoading.value = false
     }
 
+    // 🔹 Можно оставить под будущее, но оверлей тут больше не трогаем
+    fun onPageFinished() {
+        // no-op или логика для чего-то ещё
+    }
 
     fun onBookPageDetected(isBook: Boolean) {
         _showDownloadButton.value = isBook
@@ -68,3 +70,4 @@ class SearchViewModel @Inject constructor(
         }
     }
 }
+

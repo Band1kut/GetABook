@@ -24,6 +24,7 @@ class WebViewManager @Inject constructor(
     private lateinit var pageAnalyzer: PageAnalyzer
     private lateinit var webView: WebView
 
+    var onUserClick: (() -> Unit)? = null
     var onPageStarted: (() -> Unit)? = null
     var onPageFinished: (() -> Unit)? = null
 
@@ -47,27 +48,23 @@ class WebViewManager @Inject constructor(
 
         webView.addJavascriptInterface(object {
 
-            /**
-             * CLICK HOOK — ранняя индикация
-             */
             @JavascriptInterface
             fun onUserIntentNavigate() {
-                onPageStarted?.invoke()
+                Log.d("WebViewManager", "onUserIntentNavigate")
+                onUserClick?.invoke()
             }
 
-            /**
-             * SPA HOOK — только для НЕ‑поисковиков
-             */
             @JavascriptInterface
             fun onSpaNavigation(relativeUrl: String) {
-                val current = webView.url ?: return
-
-                if (isSearchEngine(current)) {
-                    return
-                }
+                Log.d("WebViewManager", "onSpaNavigation IN = $relativeUrl")
 
                 webView.post {
+                    val current = webView.url ?: return@post
+
+                    if (isSearchEngine(current)) return@post
+
                     val absolute = makeAbsoluteUrl(current, relativeUrl)
+                    Log.d("WebViewManager", "loadUrl = $absolute")
                     webView.loadUrl(absolute)
                 }
             }
@@ -90,13 +87,13 @@ class WebViewManager @Inject constructor(
                 onPageFinished?.invoke()
 
                 if (url != null && view != null) {
+                    Log.d("WebViewManager", "onPageFinished url = $url")
 
-                    // CLICK HOOK — всегда
-                    scriptProvider.injectClickHook(view)
-
-                    // SPA HOOK — только если НЕ поисковик
-                    if (!isSearchEngine(url)) {
-                        scriptProvider.injectSpaHook(view)
+                    if (isSearchEngine(url)) {
+                        scriptProvider.injectSearchClickHook(view)
+                    } else {
+                        scriptProvider.injectBookClickHook(view)
+                        // SPA hook больше не нужен для книжных сайтов
                     }
 
                     pageAnalyzer.handleEvent(url, PageEvent.Finished, view)

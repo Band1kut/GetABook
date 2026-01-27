@@ -32,6 +32,7 @@ fun SearchScreen(
     LaunchedEffect(Unit) {
         viewModel.loadUrl(query)
 
+        webViewManager.onUserClick = { viewModel.onUserClick() }
         webViewManager.onPageStarted = { viewModel.onPageStarted() }
         webViewManager.onPageFinished = { viewModel.onPageFinished() }
     }

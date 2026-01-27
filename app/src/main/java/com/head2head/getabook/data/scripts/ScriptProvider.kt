@@ -8,12 +8,11 @@ import javax.inject.Singleton
 class ScriptProvider @Inject constructor() {
 
     /**
-     * 1) CLICK HOOK — ВСЕГДА
+     * CLICK HOOK — для поисковиков
      * Сообщает Android о намерении навигации.
      * НЕ отменяет переход.
-     * НЕ вызывает notify().
      */
-    private val clickHookJs = """
+    private val searchClickHookJs = """
         (function() {
             document.addEventListener('click', function(e) {
                 let el = e.target;
@@ -26,48 +25,75 @@ class ScriptProvider @Inject constructor() {
     """.trimIndent()
 
     /**
-     * 2) SPA HOOK — ТОЛЬКО ДЛЯ НЕ‑ПОИСКОВИКОВ
-     * Перехватывает pushState/replaceState/popstate/location.assign/replace.
-     * Сообщает Android о SPA‑переходе.
+     * CLICK HOOK — для книжных сайтов
+     * Перехватывает клик, берёт href, отменяет действие страницы,
+     * передаёт URL в Android → loadUrl().
+     */
+    private val bookClickHookJs = """
+        (function() {
+            document.addEventListener('click', function(e) {
+                let el = e.target;
+                while (el && el.tagName !== 'A') el = el.parentElement;
+                if (!el || !el.href) return;
+
+                var href = el.href;
+
+                try { window.Android.onUserIntentNavigate(); } catch(e) {}
+                try { window.Android.onSpaNavigation(href); } catch(e) {}
+
+                e.preventDefault();
+                e.stopImmediatePropagation();
+            }, true);
+        })();
+    """.trimIndent()
+
+    /**
+     * SPA HOOK — оставлен только для НЕ‑поисковиков и НЕ‑книжных сайтов.
+     * На книжных сайтах он больше не используется.
      */
     private val spaHookJs = """
         (function() {
-            function notify(url) {
+            function notify(url, source) {
+                try { console.log("[SPA-HOOK] " + source + " → " + url); } catch(e) {}
                 try { window.Android.onSpaNavigation(url); } catch(e) {}
             }
 
-            const pushState = history.pushState;
+            const originalPushState = history.pushState;
             history.pushState = function(state, title, url) {
-                notify(url);
-                return pushState.apply(this, arguments);
+                notify(url, "pushState");
+                return originalPushState.apply(this, arguments);
             };
 
-            const replaceState = history.replaceState;
+            const originalReplaceState = history.replaceState;
             history.replaceState = function(state, title, url) {
-                notify(url);
-                return replaceState.apply(this, arguments);
+                notify(url, "replaceState");
+                return originalReplaceState.apply(this, arguments);
             };
 
             window.addEventListener('popstate', function() {
-                notify(location.href);
+                notify(location.href, "popstate");
             });
 
-            const assign = window.location.assign;
+            const originalAssign = window.location.assign;
             window.location.assign = function(url) {
-                notify(url);
-                return assign.call(window.location, url);
+                notify(url, "location.assign");
+                return originalAssign.call(window.location, url);
             };
 
-            const replace = window.location.replace;
+            const originalReplace = window.location.replace;
             window.location.replace = function(url) {
-                notify(url);
-                return replace.call(window.location, url);
+                notify(url, "location.replace");
+                return originalReplace.call(window.location, url);
             };
         })();
     """.trimIndent()
 
-    fun injectClickHook(webView: WebView) {
-        webView.evaluateJavascript(clickHookJs, null)
+    fun injectSearchClickHook(webView: WebView) {
+        webView.evaluateJavascript(searchClickHookJs, null)
+    }
+
+    fun injectBookClickHook(webView: WebView) {
+        webView.evaluateJavascript(bookClickHookJs, null)
     }
 
     fun injectSpaHook(webView: WebView) {
