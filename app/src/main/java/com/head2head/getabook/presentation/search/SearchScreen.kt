@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.head2head.getabook.presentation.webview.WebViewComponent
@@ -35,12 +36,14 @@ fun SearchScreen(
         webViewManager.onUserClick = { viewModel.onUserClick() }
         webViewManager.onPageStarted = { viewModel.onPageStarted() }
         webViewManager.onPageFinished = { viewModel.onPageFinished() }
+        webViewManager.onForceStopLoading = { viewModel.onLoadTimeout() }
     }
 
     val isLoading by viewModel.isLoading.collectAsState()
     val showDownloadButton by viewModel.showDownloadButton.collectAsState()
     val downloadProgress by viewModel.downloadProgress.collectAsState()
     val targetUrl by viewModel.targetUrl.collectAsState()
+
 
     Box(modifier = Modifier.fillMaxSize()) {
 
@@ -65,6 +68,8 @@ fun SearchScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.White.copy(alpha = overlayAlpha))
+                    .pointerInput(Unit) {}
+
             )
 
             Box(

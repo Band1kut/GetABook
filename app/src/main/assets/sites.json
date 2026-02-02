@@ -7,7 +7,7 @@
   {
     "domain": "audiokniga-online.ru",
     "bookPattern": "#playerjs1",
-    "hideElement": ["div[id^='adfox_']", "div[id^='yandex_rtb']"]
+    "hideElement": ["div[id^='adfox_']", "div[id^='yandex_rtb']", "#gotop"]
   },
   {
     "domain": "audiokniga.one",
@@ -57,7 +57,7 @@
   {
     "domain": "lis10book.com",
     "bookPattern": ".col-3.d-xl-none",
-    "hideElement": ["div[id^='yandex_rtb']"]
+    "hideElement": ["div[id^='yandex_rtb']", ".btn-custom.show"]
   },
   {
     "domain": "slovushko.com",

@@ -3,8 +3,8 @@ package com.head2head.getabook.data.datasource
 import android.content.Context
 import android.util.Log
 import com.head2head.getabook.domain.model.AudioBookSite
+import com.head2head.getabook.domain.model.AdBlock
 import org.json.JSONArray
-import org.json.JSONObject
 
 class SitesLocalDataSource(
     private val context: Context
@@ -65,32 +65,25 @@ class SitesLocalDataSource(
             Log.w("SitesLocalDataSource", "JSON is not array, trying object format…")
         }
 
-        // --- Format 2: Object ---
-        try {
-            val jsonObject = JSONObject(json)
-            Log.d("SitesLocalDataSource", "JSON is object, keys=${jsonObject.length()}")
-
-            val keys = jsonObject.keys()
-            while (keys.hasNext()) {
-                val domain = keys.next()
-                val obj = jsonObject.getJSONObject(domain)
-
-                result.add(
-                    AudioBookSite(
-                        domain = domain,
-                        bookPattern = obj.getString("book_pattern"),
-                        hideElement = obj.getJSONArray("hideElement").let {
-                                arr -> List(arr.length()) { arr.getString(it) }
-                        }
-                    )
-                )
-            }
-
-            return result
-        } catch (e: Exception) {
-            Log.e("SitesLocalDataSource", "Failed to parse JSON", e)
-        }
 
         return emptyList()
     }
+
+    fun loadAdBlock(): AdBlock {
+        val json = context.assets
+            .open("adBlockHosts.json")
+            .bufferedReader()
+            .use { it.readText() }
+
+        val jsonArray = JSONArray(json)
+        val hosts = mutableListOf<String>()
+
+        for (i in 0 until jsonArray.length()) {
+            hosts.add(jsonArray.getString(i))
+        }
+
+        return AdBlock(blockedHosts = hosts)
+    }
+
+
 }

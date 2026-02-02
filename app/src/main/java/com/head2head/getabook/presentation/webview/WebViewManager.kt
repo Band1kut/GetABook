@@ -9,6 +9,7 @@ import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
 import com.head2head.getabook.data.scripts.ScriptProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.net.URL
@@ -27,6 +28,12 @@ class WebViewManager @Inject constructor(
     var onUserClick: (() -> Unit)? = null
     var onPageStarted: (() -> Unit)? = null
     var onPageFinished: (() -> Unit)? = null
+    var onForceStopLoading: (() -> Unit)? = null
+
+    private var loadTimeoutRunnable: Runnable? = null
+    private val loadTimeoutMs = 15000L
+
+    private var isLoadTimeoutActive = false
 
     fun setPageAnalyzer(analyzer: PageAnalyzer) {
         this.pageAnalyzer = analyzer
@@ -52,6 +59,7 @@ class WebViewManager @Inject constructor(
             fun onUserIntentNavigate() {
                 Log.d("WebViewManager", "onUserIntentNavigate")
                 onUserClick?.invoke()
+                startLoadTimeout()
             }
 
             @JavascriptInterface
@@ -75,6 +83,7 @@ class WebViewManager @Inject constructor(
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 super.onPageStarted(view, url, favicon)
+                cancelLoadTimeout()
                 onPageStarted?.invoke()
 
                 if (url != null && view != null) {
@@ -84,6 +93,7 @@ class WebViewManager @Inject constructor(
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
+                cancelLoadTimeout()
                 onPageFinished?.invoke()
 
                 if (url != null && view != null) {
@@ -93,7 +103,6 @@ class WebViewManager @Inject constructor(
                         scriptProvider.injectSearchClickHook(view)
                     } else {
                         scriptProvider.injectBookClickHook(view)
-                        // SPA hook больше не нужен для книжных сайтов
                     }
 
                     pageAnalyzer.handleEvent(url, PageEvent.Finished, view)
@@ -109,13 +118,62 @@ class WebViewManager @Inject constructor(
         }
     }
 
+    private fun startLoadTimeout() {
+        loadTimeoutRunnable?.let { webView.removeCallbacks(it) }
+
+        isLoadTimeoutActive = true
+
+        val r = Runnable {
+            Log.d("WebViewManager", "Timeout: page did not start loading")
+            forceStopLoading()
+            Toast.makeText(
+                context,
+                "Страница не загружена, попробуйте еще раз или другую ссылку",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+
+        loadTimeoutRunnable = r
+        webView.postDelayed(r, loadTimeoutMs)
+    }
+
+    private fun cancelLoadTimeout() {
+        loadTimeoutRunnable?.let { webView.removeCallbacks(it) }
+        isLoadTimeoutActive = false
+    }
+
+    private fun forceStopLoading() {
+        cancelLoadTimeout()
+
+        try { webView.stopLoading() } catch (_: Exception) {}
+
+        val fallbackUrl = webView.copyBackForwardList().currentItem?.url
+
+        if (fallbackUrl != null) {
+            webView.loadUrl(fallbackUrl)
+        }
+
+//        webView.reload()
+        onForceStopLoading?.invoke()
+    }
+
     fun loadUrl(url: String) {
         webView.loadUrl(url)
     }
 
-    fun canGoBack(): Boolean = webView.canGoBack()
+    fun canGoBack(): Boolean {
+        if (isLoadTimeoutActive){
+            return true
+        }
+        return webView.canGoBack()
+    }
+
 
     fun goBack() {
+        if (isLoadTimeoutActive){
+            forceStopLoading()
+            return
+        }
         webView.goBack()
     }
 
