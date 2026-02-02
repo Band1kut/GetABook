@@ -3,7 +3,7 @@ package com.head2head.getabook.data.datasource
 import android.content.Context
 import android.util.Log
 import com.head2head.getabook.domain.model.AudioBookSite
-import com.head2head.getabook.domain.model.AdBlock
+import com.head2head.getabook.domain.model.AdBlockDto
 import org.json.JSONArray
 
 class SitesLocalDataSource(
@@ -69,9 +69,9 @@ class SitesLocalDataSource(
         return emptyList()
     }
 
-    fun loadAdBlock(): AdBlock {
+    fun loadAdBlock(): AdBlockDto {
         val json = context.assets
-            .open("adBlockHosts.json")
+            .open("adblock.json")
             .bufferedReader()
             .use { it.readText() }
 
@@ -82,7 +82,7 @@ class SitesLocalDataSource(
             hosts.add(jsonArray.getString(i))
         }
 
-        return AdBlock(blockedHosts = hosts)
+        return AdBlockDto(blockedHosts = hosts)
     }
 
 

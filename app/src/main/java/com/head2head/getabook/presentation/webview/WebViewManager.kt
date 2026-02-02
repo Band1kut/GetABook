@@ -6,6 +6,8 @@ import android.util.Log
 import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -19,7 +21,8 @@ import javax.inject.Singleton
 @Singleton
 class WebViewManager @Inject constructor(
     @ApplicationContext private val context: Context,
-    val scriptProvider: ScriptProvider
+    val scriptProvider: ScriptProvider,
+    private val blockedHosts: Set<String>   // ← внедрено через DI
 ) {
 
     private lateinit var pageAnalyzer: PageAnalyzer
@@ -81,6 +84,43 @@ class WebViewManager @Inject constructor(
 
         webView.webViewClient = object : WebViewClient() {
 
+            // -----------------------------
+            // AD BLOCK
+            // -----------------------------
+            override fun shouldInterceptRequest(
+                view: WebView?,
+                request: WebResourceRequest?
+            ): WebResourceResponse? {
+
+                val url = request?.url ?: return null
+                val fullUrl = url.toString().lowercase()
+                val host = url.host?.lowercase() ?: return null
+                val cleanHost = host.removePrefix("www.")
+
+                val shouldBlock = blockedHosts.any { rule ->
+                    val ruleLower = rule.lowercase()
+
+                    if (ruleLower.contains("/")) {
+                        // Правило по пути: yandex.ru/ads
+                        fullUrl.contains(ruleLower)
+                    } else {
+                        // Правило по домену: googlesyndication.com
+                        cleanHost == ruleLower || cleanHost.endsWith(".$ruleLower")
+                    }
+                }
+
+                if (shouldBlock) {
+                    Log.d("AdBlock", "Blocked: $fullUrl")
+                    return WebResourceResponse("text/plain", "utf-8", null)
+                }
+
+                return super.shouldInterceptRequest(view, request)
+            }
+
+
+            // -----------------------------
+            // PAGE EVENTS
+            // -----------------------------
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 super.onPageStarted(view, url, favicon)
                 cancelLoadTimeout()
@@ -153,7 +193,6 @@ class WebViewManager @Inject constructor(
             webView.loadUrl(fallbackUrl)
         }
 
-//        webView.reload()
         onForceStopLoading?.invoke()
     }
 
@@ -167,7 +206,6 @@ class WebViewManager @Inject constructor(
         }
         return webView.canGoBack()
     }
-
 
     fun goBack() {
         if (isLoadTimeoutActive){

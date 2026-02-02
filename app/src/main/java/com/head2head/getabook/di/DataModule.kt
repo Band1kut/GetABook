@@ -3,9 +3,12 @@ package com.head2head.getabook.di
 import android.content.Context
 import com.head2head.getabook.data.active.ActiveSitesRepository
 import com.head2head.getabook.data.datasource.SitesLocalDataSource
+import com.head2head.getabook.data.datasource.AdBlockLocalDataSource
 import com.head2head.getabook.data.repository.SitesRepositoryImpl
+import com.head2head.getabook.data.repository.AdBlockRepositoryImpl
 import com.head2head.getabook.domain.repository.SettingsRepository
 import com.head2head.getabook.domain.repository.SitesRepository
+import com.head2head.getabook.domain.repository.AdBlockRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -16,6 +19,10 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object DataModule {
+
+    // -----------------------------
+    // Sites
+    // -----------------------------
 
     @Provides
     @Singleton
@@ -36,11 +43,33 @@ object DataModule {
         sitesRepository: SitesRepository
     ): SettingsRepository = SettingsRepository(context, sitesRepository)
 
-
     @Provides
     @Singleton
     fun provideActiveSitesRepository(
         sitesRepository: SitesRepository,
         settingsRepository: SettingsRepository
     ): ActiveSitesRepository = ActiveSitesRepository(sitesRepository, settingsRepository)
+
+
+    // -----------------------------
+    // AdBlock
+    // -----------------------------
+
+    @Provides
+    @Singleton
+    fun provideAdBlockLocalDataSource(
+        @ApplicationContext context: Context
+    ): AdBlockLocalDataSource = AdBlockLocalDataSource(context)
+
+    @Provides
+    @Singleton
+    fun provideAdBlockRepository(
+        localDataSource: AdBlockLocalDataSource
+    ): AdBlockRepository = AdBlockRepositoryImpl(localDataSource)
+
+    @Provides
+    @Singleton
+    fun provideBlockedHosts(
+        adBlockRepository: AdBlockRepository
+    ): Set<String> = adBlockRepository.getBlockedHosts()
 }

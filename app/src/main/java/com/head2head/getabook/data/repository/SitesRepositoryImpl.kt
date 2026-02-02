@@ -2,7 +2,7 @@ package com.head2head.getabook.data.repository
 
 import com.head2head.getabook.data.datasource.SitesLocalDataSource
 import com.head2head.getabook.domain.model.AudioBookSite
-import com.head2head.getabook.domain.model.AdBlock
+import com.head2head.getabook.domain.model.AdBlockDto
 import com.head2head.getabook.domain.repository.SitesRepository
 
 class SitesRepositoryImpl(
@@ -13,7 +13,7 @@ class SitesRepositoryImpl(
         localDataSource.loadSites()
     }
 
-    private val adbHosts: AdBlock by lazy {
+    private val adbHosts: AdBlockDto by lazy {
         localDataSource.loadAdBlock()
     }
 
