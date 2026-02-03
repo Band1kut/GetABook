@@ -20,7 +20,7 @@ import javax.inject.Singleton
 
 @Singleton
 class WebViewManager @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     val scriptProvider: ScriptProvider,
     private val blockedHosts: Set<String>   // ← внедрено через DI
 ) {

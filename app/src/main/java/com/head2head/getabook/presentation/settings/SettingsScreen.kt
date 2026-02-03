@@ -95,7 +95,7 @@ fun SettingsScreen(
                 }
             }
 
-            item { Divider() }
+            item { HorizontalDivider() }
 
             // ---------------------------
             // 2. Папка для сохранения
@@ -113,7 +113,7 @@ fun SettingsScreen(
                 }
             }
 
-            item { Divider() }
+            item { HorizontalDivider() }
 
             // ---------------------------
             // 3. Сайты — кнопки
