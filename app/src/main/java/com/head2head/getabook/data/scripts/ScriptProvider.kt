@@ -11,20 +11,43 @@ class ScriptProvider @Inject constructor() {
      * CLICK HOOK — для поисковиков
      * Теперь передаёт URL в Android.onUserIntentNavigate(url)
      */
+    // ScriptProvider.kt
+
     private val searchClickHookJs = """
     (function() {
+        const searchHosts = ["yandex.ru", "ya.ru", "google.com", "google.ru"];
+
+        function isSearchHost(host) {
+            return searchHosts.some(function(h) {
+                return host === h || host.endsWith("." + h);
+            });
+        }
+
         document.addEventListener('click', function(e) {
             let el = e.target;
             while (el && el.tagName !== 'A') el = el.parentElement;
             if (!el || !el.href) return;
 
-            try { window.Android.onUserIntentNavigate(el.href); } catch(e) {}
+            try {
+                const url = new URL(el.href);
+                const host = url.host;
 
-            e.preventDefault();
-            e.stopImmediatePropagation();
+                if (!isSearchHost(host)) {
+                    // Внешняя ссылка → отдаём наружу
+                    try { window.Android.onNavigate(url.toString()); } catch(e) {}
+
+                    // Отменяем переход внутри WebView
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                }
+                // иначе: внутренняя ссылка поисковика → WebView сам загрузит
+            } catch (e) {
+                // если URL кривой — ничего не делаем, пусть WebView сам решает
+            }
         }, true);
     })();
-""".trimIndent()
+    """.trimIndent()
+
 
 
     /**

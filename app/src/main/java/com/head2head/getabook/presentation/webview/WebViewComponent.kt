@@ -1,59 +1,48 @@
 package com.head2head.getabook.presentation.webview
 
+import android.util.Log
 import android.view.View
 import android.webkit.WebView
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.foundation.layout.Box
 
 @Composable
 fun WebViewComponent(
     modifier: Modifier = Modifier,
-    webViewManager: WebViewManager
+    searchManager: SearchWebViewManager,
+    bookManager: BookWebViewManager,
+    isBookMode: Boolean,
+    bookWebViewKey: Int
 ) {
     val context = LocalContext.current
 
-    // --- REMEMBER SEARCH WEBVIEW ---
     val searchWebView = remember {
-        WebView(context).apply {
-            webViewManager.attachSearchWebView(this)
-        }
+        WebView(context).also { searchManager.attach(it) }
     }
 
-    // --- REMEMBER BOOK WEBVIEW ---
-    val bookWebView = remember {
-        WebView(context).apply {
-            webViewManager.attachBookWebView(this)
-        }
+
+    val bookWebView = remember(bookWebViewKey) {
+        Log.d("WebViewComponent", "Recompose, bookKey=$bookWebViewKey")
+        WebView(context).also { bookManager.attach(it) }
     }
 
     Box(modifier = modifier) {
-
-        // --- SEARCH WEBVIEW ---
         AndroidView(
             factory = { searchWebView },
             update = { view ->
-                view.visibility =
-                    if (webViewManager.isSearchMode()) View.VISIBLE else View.GONE
+                view.visibility = if (!isBookMode) View.VISIBLE else View.GONE
             }
         )
 
-        // --- BOOK WEBVIEW ---
         AndroidView(
             factory = { bookWebView },
             update = { view ->
-                view.visibility =
-                    if (webViewManager.isBookMode()) View.VISIBLE else View.GONE
+                view.visibility = if (isBookMode) View.VISIBLE else View.GONE
             }
         )
-
-        // --- CLEANUP ---
-        DisposableEffect(Unit) {
-            onDispose {
-                webViewManager.destroyAll()
-            }
-        }
     }
 }

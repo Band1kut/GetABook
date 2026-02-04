@@ -1,5 +1,7 @@
 package com.head2head.getabook.presentation.search
 
+import android.util.Log
+import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -19,39 +21,65 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.head2head.getabook.presentation.webview.BookWebViewManager
+import com.head2head.getabook.presentation.webview.SearchWebViewManager
 import com.head2head.getabook.presentation.webview.WebViewComponent
-import com.head2head.getabook.presentation.webview.WebViewManager
+import com.head2head.getabook.presentation.webview.WebViewCoordinator
 
 @Composable
 fun SearchScreen(
     query: String,
-    webViewManager: WebViewManager,
+    searchManager: SearchWebViewManager,
+    bookManager: BookWebViewManager,
+    coordinator: WebViewCoordinator,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
-    // Загружаем поисковый URL только после того,
-    // как WebViewComponent создаст оба WebView
-    LaunchedEffect(Unit) {
-        webViewManager.loadSearchQuery(query)
+    val context = LocalContext.current
 
-        webViewManager.onUserClick = { viewModel.onUserClick() }
-        webViewManager.onPageStarted = { viewModel.onPageStarted() }
-        webViewManager.onPageFinished = { viewModel.onPageFinished() }
-        webViewManager.onForceStopLoading = { viewModel.onLoadTimeout() }
+    // Coordinator сам подписывается на события WebView и ViewModel
+    LaunchedEffect(Unit) {
+        Log.d("SearchScreen", "bindToViewModel()")
+        coordinator.bindToViewModel(viewModel)
     }
 
+    // Загружаем поисковый URL
+    LaunchedEffect(query) {
+        val url = viewModel.buildSearchUrl(query)
+        searchManager.loadSearchUrl(url)
+    }
+
+    // Ошибка загрузки → Toast
+    val loadError by viewModel.loadError.collectAsState()
+    LaunchedEffect(loadError) {
+        if (loadError) {
+            Toast.makeText(context, "Не удалось загрузить страницу", Toast.LENGTH_SHORT).show()
+            viewModel.clearLoadError()
+        }
+    }
+
+    // UI состояния
+    val isBookMode by viewModel.isBookMode.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val showDownloadButton by viewModel.showDownloadButton.collectAsState()
     val downloadProgress by viewModel.downloadProgress.collectAsState()
+
+    // Ключ пересоздания BookWebView (теперь приходит из Coordinator)
+    val bookWebViewKey by coordinator.bookWebViewKey.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
 
         WebViewComponent(
             modifier = Modifier.fillMaxSize(),
-            webViewManager = webViewManager
+            searchManager = searchManager,
+            bookManager = bookManager,
+            isBookMode = isBookMode,
+            bookWebViewKey = bookWebViewKey
         )
 
+        // Оверлей загрузки
         val overlayAlpha by animateFloatAsState(
             targetValue = if (isLoading) 0.6f else 0f,
             animationSpec = tween(200)
@@ -73,6 +101,7 @@ fun SearchScreen(
             }
         }
 
+        // Кнопка скачивания
         if (showDownloadButton) {
             FloatingActionButton(
                 onClick = { viewModel.requestDownload() },
@@ -84,14 +113,13 @@ fun SearchScreen(
             }
         }
 
+        // Прогресс скачивания
         downloadProgress?.let { progress ->
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(
-                    progress = { progress / 100f }
-                )
+                CircularProgressIndicator(progress = { progress / 100f })
             }
         }
     }

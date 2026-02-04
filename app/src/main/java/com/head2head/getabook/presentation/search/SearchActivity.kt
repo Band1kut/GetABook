@@ -1,13 +1,15 @@
 package com.head2head.getabook.presentation.search
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.remember
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.head2head.getabook.presentation.webview.PageAnalyzer
-import com.head2head.getabook.presentation.webview.WebViewManager
+import com.head2head.getabook.data.active.ActiveSitesRepository
+import com.head2head.getabook.data.scripts.ScriptProvider
+import com.head2head.getabook.presentation.webview.*
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -15,7 +17,10 @@ import javax.inject.Inject
 class SearchActivity : ComponentActivity() {
 
     @Inject
-    lateinit var webViewManager: WebViewManager
+    lateinit var scriptProvider: ScriptProvider
+
+    @Inject
+    lateinit var activeSitesRepository: ActiveSitesRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,32 +31,65 @@ class SearchActivity : ComponentActivity() {
 
             val viewModel: SearchViewModel = hiltViewModel()
 
+            // --- 1. Создаём менеджеры WebView ---
+            val searchManager = remember {
+                SearchWebViewManagerImpl(scriptProvider)
+            }
+
             val pageAnalyzer = remember {
                 PageAnalyzer(
-                    activeSitesRepository = viewModel.activeSitesRepository,
-                    scriptProvider = webViewManager.scriptProvider,
+                    activeSitesRepository = activeSitesRepository,
+                    scriptProvider = scriptProvider,
                     onBookPageDetected = { isBook ->
                         viewModel.onBookPageDetected(isBook)
                     }
                 )
             }
 
-            webViewManager.setPageAnalyzer(pageAnalyzer)
+            val bookManager = remember {
+                BookWebViewManagerImpl(
+                    scriptProvider = scriptProvider,
+                    pageAnalyzer = pageAnalyzer
+                )
+            }
 
+            // --- 2. Создаём координатор ---
+            val coordinator = remember {
+                WebViewCoordinator(
+                    context = this,
+                    searchManager = searchManager,
+                    bookManager = bookManager
+                )
+            }
+
+            // --- 3. Обработка кнопки "Назад" ---
             BackHandler {
-                if (webViewManager.handleBack()) {
-                    return@BackHandler
+                Log.d("BackHandler", "Back pressed. isBookMode=${viewModel.isBookMode.value}")
+                if (viewModel.isBookMode.value) {
+                    if (bookManager.canGoBack()) {
+                        Log.d("BackHandler", "BookWebView goBack()")
+                        bookManager.goBack()
+                    } else {
+                        Log.d("BackHandler", "Exit book mode + reset")
+                        // Выход из режима книги + пересоздание BookWebView
+                        viewModel.exitBookMode()
+                        viewModel.requestBookWebViewReset()
+                    }
                 } else {
-                    finish()
+                    if (searchManager.canGoBack()) {
+                        searchManager.goBack()
+                    } else {
+                        finish()
+                    }
                 }
             }
 
-            // Теперь загрузка поискового URL идёт напрямую через WebViewManager
-//            webViewManager.loadSearchUrl(query)
-
+            // --- 4. Запускаем экран ---
             SearchScreen(
                 query = query,
-                webViewManager = webViewManager,
+                searchManager = searchManager,
+                bookManager = bookManager,
+                coordinator = coordinator,
                 viewModel = viewModel
             )
         }
