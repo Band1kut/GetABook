@@ -9,25 +9,27 @@ class ScriptProvider @Inject constructor() {
 
     /**
      * CLICK HOOK — для поисковиков
-     * Сообщает Android о намерении навигации.
-     * НЕ отменяет переход.
+     * Теперь передаёт URL в Android.onUserIntentNavigate(url)
      */
     private val searchClickHookJs = """
-        (function() {
-            document.addEventListener('click', function(e) {
-                let el = e.target;
-                while (el && el.tagName !== 'A') el = el.parentElement;
-                if (!el || !el.href) return;
+    (function() {
+        document.addEventListener('click', function(e) {
+            let el = e.target;
+            while (el && el.tagName !== 'A') el = el.parentElement;
+            if (!el || !el.href) return;
 
-                try { window.Android.onUserIntentNavigate(); } catch(e) {}
-            }, true);
-        })();
-    """.trimIndent()
+            try { window.Android.onUserIntentNavigate(el.href); } catch(e) {}
+
+            e.preventDefault();
+            e.stopImmediatePropagation();
+        }, true);
+    })();
+""".trimIndent()
+
 
     /**
      * CLICK HOOK — для книжных сайтов
-     * Перехватывает клик, берёт href, отменяет действие страницы,
-     * передаёт URL в Android → loadUrl().
+     * Перехватывает клик, отменяет переход, передаёт href в Android.
      */
     private val bookClickHookJs = """
         (function() {
@@ -38,7 +40,7 @@ class ScriptProvider @Inject constructor() {
 
                 var href = el.href;
 
-                try { window.Android.onUserIntentNavigate(); } catch(e) {}
+                try { window.Android.onUserIntentNavigate(href); } catch(e) {}
                 try { window.Android.onSpaNavigation(href); } catch(e) {}
 
                 e.preventDefault();
@@ -48,8 +50,7 @@ class ScriptProvider @Inject constructor() {
     """.trimIndent()
 
     /**
-     * SPA HOOK — оставлен только для НЕ‑поисковиков и НЕ‑книжных сайтов.
-     * На книжных сайтах он больше не используется.
+     * SPA HOOK — для внутренних переходов
      */
     private val spaHookJs = """
         (function() {

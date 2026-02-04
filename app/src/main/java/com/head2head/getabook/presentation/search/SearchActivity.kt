@@ -29,23 +29,25 @@ class SearchActivity : ComponentActivity() {
             val pageAnalyzer = remember {
                 PageAnalyzer(
                     activeSitesRepository = viewModel.activeSitesRepository,
-                    scriptProvider = webViewManager.scriptProvider, // добавили
+                    scriptProvider = webViewManager.scriptProvider,
                     onBookPageDetected = { isBook ->
                         viewModel.onBookPageDetected(isBook)
                     }
                 )
             }
 
-
             webViewManager.setPageAnalyzer(pageAnalyzer)
 
             BackHandler {
-                if (webViewManager.canGoBack()) webViewManager.goBack()
-                else finish()
+                if (webViewManager.handleBack()) {
+                    return@BackHandler
+                } else {
+                    finish()
+                }
             }
 
-            // ВАЖНО: тут был loadSearch(query), теперь:
-            viewModel.loadUrl(query)
+            // Теперь загрузка поискового URL идёт напрямую через WebViewManager
+//            webViewManager.loadSearchUrl(query)
 
             SearchScreen(
                 query = query,

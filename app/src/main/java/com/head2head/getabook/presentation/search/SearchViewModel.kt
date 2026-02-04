@@ -17,9 +17,6 @@ class SearchViewModel @Inject constructor(
     private val buildSearchUrlUseCase: BuildSearchUrlUseCase
 ) : ViewModel() {
 
-    private val _targetUrl = MutableStateFlow<String?>(null)
-    val targetUrl: StateFlow<String?> = _targetUrl
-
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
@@ -29,13 +26,8 @@ class SearchViewModel @Inject constructor(
     private val _downloadProgress = MutableStateFlow<Int?>(null)
     val downloadProgress: StateFlow<Int?> = _downloadProgress
 
-    fun loadUrl(query: String) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            val url = buildSearchUrlUseCase(query)
-            _targetUrl.value = url
-        }
-    }
+    // URL книги, для которой запрашиваем скачивание
+    private var currentBookUrl: String? = null
 
     fun onUserClick() {
         _isLoading.value = true
@@ -46,7 +38,7 @@ class SearchViewModel @Inject constructor(
     }
 
     fun onPageFinished() {
-        // no-op
+        // no-op, можно использовать при необходимости
     }
 
     fun onLoadTimeout() {
@@ -55,9 +47,18 @@ class SearchViewModel @Inject constructor(
 
     fun onBookPageDetected(isBook: Boolean) {
         _showDownloadButton.value = isBook
+        if (!isBook) {
+            currentBookUrl = null
+        }
     }
 
-    fun requestDownload(url: String) {
+    fun setCurrentBookUrl(url: String) {
+        currentBookUrl = url
+    }
+
+    fun requestDownload() {
+        val url = currentBookUrl ?: return
+
         viewModelScope.launch {
             _downloadProgress.value = 0
 

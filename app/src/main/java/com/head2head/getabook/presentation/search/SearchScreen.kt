@@ -30,8 +30,10 @@ fun SearchScreen(
     webViewManager: WebViewManager,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
+    // Загружаем поисковый URL только после того,
+    // как WebViewComponent создаст оба WebView
     LaunchedEffect(Unit) {
-        viewModel.loadUrl(query)
+        webViewManager.loadSearchQuery(query)
 
         webViewManager.onUserClick = { viewModel.onUserClick() }
         webViewManager.onPageStarted = { viewModel.onPageStarted() }
@@ -42,8 +44,6 @@ fun SearchScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val showDownloadButton by viewModel.showDownloadButton.collectAsState()
     val downloadProgress by viewModel.downloadProgress.collectAsState()
-    val targetUrl by viewModel.targetUrl.collectAsState()
-
 
     Box(modifier = Modifier.fillMaxSize()) {
 
@@ -51,12 +51,6 @@ fun SearchScreen(
             modifier = Modifier.fillMaxSize(),
             webViewManager = webViewManager
         )
-
-        LaunchedEffect(targetUrl) {
-            targetUrl?.let { url ->
-                webViewManager.loadUrl(url)
-            }
-        }
 
         val overlayAlpha by animateFloatAsState(
             targetValue = if (isLoading) 0.6f else 0f,
@@ -69,7 +63,6 @@ fun SearchScreen(
                     .fillMaxSize()
                     .background(Color.White.copy(alpha = overlayAlpha))
                     .pointerInput(Unit) {}
-
             )
 
             Box(
@@ -82,9 +75,7 @@ fun SearchScreen(
 
         if (showDownloadButton) {
             FloatingActionButton(
-                onClick = {
-                    targetUrl?.let { viewModel.requestDownload(it) }
-                },
+                onClick = { viewModel.requestDownload() },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(16.dp)

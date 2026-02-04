@@ -13,9 +13,9 @@ class SitesRepositoryImpl(
         localDataSource.loadSites()
     }
 
-    private val adbHosts: AdBlockDto by lazy {
-        localDataSource.loadAdBlock()
-    }
+//    private val adbHosts: AdBlockDto by lazy {
+//        localDataSource.loadAdBlock()
+//    }
 
     override fun getAllSites(): List<AudioBookSite> = sites
 

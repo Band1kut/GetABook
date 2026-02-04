@@ -69,21 +69,21 @@ class SitesLocalDataSource(
         return emptyList()
     }
 
-    fun loadAdBlock(): AdBlockDto {
-        val json = context.assets
-            .open("adblock.json")
-            .bufferedReader()
-            .use { it.readText() }
-
-        val jsonArray = JSONArray(json)
-        val hosts = mutableListOf<String>()
-
-        for (i in 0 until jsonArray.length()) {
-            hosts.add(jsonArray.getString(i))
-        }
-
-        return AdBlockDto(blockedHosts = hosts)
-    }
+//    fun loadAdBlock(): AdBlockDto {
+//        val json = context.assets
+//            .open("adblock.json")
+//            .bufferedReader()
+//            .use { it.readText() }
+//
+//        val jsonArray = JSONArray(json)
+//        val hosts = mutableListOf<String>()
+//
+//        for (i in 0 until jsonArray.length()) {
+//            hosts.add(jsonArray.getString(i))
+//        }
+//
+//        return AdBlockDto(blockedHosts = hosts)
+//    }
 
 
 }
