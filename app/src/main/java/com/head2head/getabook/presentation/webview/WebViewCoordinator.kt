@@ -19,10 +19,6 @@ class WebViewCoordinator(
 
     private val scope = CoroutineScope(Dispatchers.Main)
 
-    // ключ для пересоздания BookWebView
-    private val _bookWebViewKey = MutableStateFlow(0)
-    val bookWebViewKey = _bookWebViewKey
-
     private val tag = "Coordinator"
 
     fun bindToViewModel(viewModel: SearchViewModel) {
@@ -43,6 +39,10 @@ class WebViewCoordinator(
             viewModel.onPageFinished()
         }
 
+        bookManager.onBookDetected = { isBook ->
+            viewModel.onBookPageDetected(isBook)
+        }
+
         bookManager.onPageStarted = {
             Log.d(tag, "BookWebView onPageStarted")
             viewModel.onBookPageStarted()
@@ -53,15 +53,6 @@ class WebViewCoordinator(
             viewModel.onPageFinished()
         }
 
-        scope.launch {
-            viewModel.resetBookWebView.collectLatest { shouldReset ->
-                if (shouldReset) {
-                    Log.d(tag, "resetBookWebView() requested")
-                    resetBookWebView()
-                    viewModel.acknowledgeBookWebViewReset()
-                }
-            }
-        }
 
         scope.launch {
             viewModel.navigateToBook.collectLatest { url ->
@@ -69,29 +60,10 @@ class WebViewCoordinator(
                     Log.d(tag, "navigateToBook → $url")
                     viewModel.onUserClick()
                     viewModel.setCurrentBookUrl(url)
-                    bookManager.loadBookUrl(url)
+                    viewModel.openBook(url)
                 }
             }
         }
-    }
-
-    private fun resetBookWebView() {
-        Log.d(tag, "Destroying old BookWebView")
-
-        val old = bookManager.webView
-        try {
-            old.stopLoading()
-            old.destroy()
-        } catch (e: Throwable) {
-            Log.e(tag, "Error destroying WebView", e)
-        }
-
-        Log.d(tag, "Creating new BookWebView")
-        val newWebView = WebView(context)
-        bookManager.attach(newWebView)
-
-        _bookWebViewKey.value++
-        Log.d(tag, "New BookWebView key = ${_bookWebViewKey.value}")
     }
 
 }

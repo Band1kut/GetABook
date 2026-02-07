@@ -40,8 +40,14 @@ class SearchViewModel @Inject constructor(
     private var loadTimeoutJob: Job? = null
     private var currentBookUrl: String? = null
 
-    private val _resetBookWebView = MutableStateFlow(false)
-    val resetBookWebView = _resetBookWebView
+    private val _pendingBookUrl = MutableStateFlow<String?>(null)
+    val pendingBookUrl = _pendingBookUrl
+
+    fun openBook(url: String) {
+        _pendingBookUrl.value = url
+        _isBookMode.value = true
+    }
+
 
     suspend fun buildSearchUrl(query: String): String {
         return buildSearchUrlUseCase(query)
@@ -110,18 +116,8 @@ class SearchViewModel @Inject constructor(
     fun exitBookMode() {
         Log.d(tag, "exitBookMode()")
         _isBookMode.value = false
-        requestBookWebViewReset()
     }
 
-    fun requestBookWebViewReset() {
-        Log.d(tag, "requestBookWebViewReset()")
-        _resetBookWebView.value = true
-    }
-
-    fun acknowledgeBookWebViewReset() {
-        Log.d(tag, "acknowledgeBookWebViewReset()")
-        _resetBookWebView.value = false
-    }
 
     fun requestDownload() {
         val url = currentBookUrl ?: return

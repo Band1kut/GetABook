@@ -65,9 +65,7 @@ fun SearchScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val showDownloadButton by viewModel.showDownloadButton.collectAsState()
     val downloadProgress by viewModel.downloadProgress.collectAsState()
-
-    // Ключ пересоздания BookWebView (теперь приходит из Coordinator)
-    val bookWebViewKey by coordinator.bookWebViewKey.collectAsState()
+    val pendingBookUrl by viewModel.pendingBookUrl.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
 
@@ -76,7 +74,7 @@ fun SearchScreen(
             searchManager = searchManager,
             bookManager = bookManager,
             isBookMode = isBookMode,
-            bookWebViewKey = bookWebViewKey
+            pendingBookUrl = pendingBookUrl
         )
 
         // Оверлей загрузки

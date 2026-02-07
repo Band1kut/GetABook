@@ -1,11 +1,9 @@
 package com.head2head.getabook.presentation.webview
 
-import android.util.Log
 import android.view.View
 import android.webkit.WebView
 import androidx.compose.foundation.layout.Box
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -16,21 +14,32 @@ fun WebViewComponent(
     searchManager: SearchWebViewManager,
     bookManager: BookWebViewManager,
     isBookMode: Boolean,
-    bookWebViewKey: Int
+    pendingBookUrl: String?, // ← добавляем URL книги
 ) {
     val context = LocalContext.current
 
+    // Search WebView живёт всё время жизни экрана
     val searchWebView = remember {
         WebView(context).also { searchManager.attach(it) }
     }
 
+    // Book WebView создаётся только когда включён режим книги
+    val bookWebView = remember(isBookMode) {
+        if (isBookMode) {
+            WebView(context).also { bookManager.attach(it) }
+        } else null
+    }
 
-    val bookWebView = remember(bookWebViewKey) {
-        Log.d("WebViewComponent", "Recompose, bookKey=$bookWebViewKey")
-        WebView(context).also { bookManager.attach(it) }
+    // Загружаем URL только когда WebView уже создан
+    LaunchedEffect(bookWebView, pendingBookUrl) {
+        if (bookWebView != null && pendingBookUrl != null) {
+            bookManager.loadBookUrl(pendingBookUrl)
+        }
     }
 
     Box(modifier = modifier) {
+
+        // Search WebView
         AndroidView(
             factory = { searchWebView },
             update = { view ->
@@ -38,11 +47,14 @@ fun WebViewComponent(
             }
         )
 
-        AndroidView(
-            factory = { bookWebView },
-            update = { view ->
-                view.visibility = if (isBookMode) View.VISIBLE else View.GONE
-            }
-        )
+        // Book WebView
+        if (bookWebView != null) {
+            AndroidView(
+                factory = { bookWebView },
+                update = { view ->
+                    view.visibility = if (isBookMode) View.VISIBLE else View.GONE
+                }
+            )
+        }
     }
 }

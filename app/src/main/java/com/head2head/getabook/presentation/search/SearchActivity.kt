@@ -64,16 +64,12 @@ class SearchActivity : ComponentActivity() {
 
             // --- 3. Обработка кнопки "Назад" ---
             BackHandler {
-                Log.d("BackHandler", "Back pressed. isBookMode=${viewModel.isBookMode.value}")
                 if (viewModel.isBookMode.value) {
                     if (bookManager.canGoBack()) {
-                        Log.d("BackHandler", "BookWebView goBack()")
                         bookManager.goBack()
                     } else {
-                        Log.d("BackHandler", "Exit book mode + reset")
-                        // Выход из режима книги + пересоздание BookWebView
+                        // просто выходим из режима книги
                         viewModel.exitBookMode()
-                        viewModel.requestBookWebViewReset()
                     }
                 } else {
                     if (searchManager.canGoBack()) {
@@ -83,6 +79,7 @@ class SearchActivity : ComponentActivity() {
                     }
                 }
             }
+
 
             // --- 4. Запускаем экран ---
             SearchScreen(
